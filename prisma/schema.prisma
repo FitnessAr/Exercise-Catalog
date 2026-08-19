@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Exercise {
+  id                String   @id @db.VarChar(10)
+  name              String   @db.VarChar(255)
+  category          String?  @db.VarChar(100)
+  bodyPart          String?  @map("body_part") @db.VarChar(100)
+  equipment         String?  @db.VarChar(100)
+  muscleGroup       String?  @map("muscle_group") @db.VarChar(100)
+  target            String?  @db.VarChar(100)
+  secondaryMuscles  Json?    @map("secondary_muscles")
+  instructions      Json?
+  instructionSteps  Json?    @map("instruction_steps")
+  image             String?  @db.VarChar(500)
+  gifUrl            String?  @map("gif_url") @db.VarChar(500)
+  attribution       String?  @db.VarChar(500)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@index([bodyPart])
+  @@index([equipment])
+  @@index([muscleGroup])
+  @@index([target])
+  @@map("exercises")
+}

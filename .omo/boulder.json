@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "active_work_id": "translate-exercises",
+  "works": {
+    "translate-exercises": {
+      "work_id": "translate-exercises",
+      "active_plan": ".omo/plans/translate-exercises.md",
+      "plan_name": "translate-exercises",
+      "session_ids": ["codex:ses_fe4e43597ffekppLTdgl45D3Is"],
+      "status": "active",
+      "worktree_path": null
+    }
+  }
+}
