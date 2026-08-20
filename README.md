@@ -54,6 +54,8 @@ Esto importará ~1000+ ejercicios del dataset JSON a PostgreSQL.
 
 ## API Endpoints
 
+> 📖 **Referencia completa de todos los endpoints:** [API.md](./API.md)
+
 ### Headers requeridos
 
 Todos los endpoints (excepto `/api/health`) requieren:
@@ -75,6 +77,9 @@ Lista todos los ejercicios con filtros opcionales.
 | `equipment` | string | Filtrar por equipo (ej: body weight, dumbbell) |
 | `muscle_group` | string | Filtrar por grupo muscular |
 | `target` | string | Filtrar por músculo objetivo |
+| `q` | string | Búsqueda por nombre, case-insensitive (contiene) |
+| `ids` | string | Batch por ids separados por coma (max 100, ej: `0001,0002`) |
+| `lang` | string | Idioma de instrucciones (en, es, it, tr, ru, zh, hi, pl, ko, fr) |
 | `offset` | number | Paginación (default: 0) |
 | `limit` | number | Resultados por página (default: 20, max: 100) |
 
@@ -127,6 +132,43 @@ curl -H "x-api-key: tu-api-key" \
 }
 ```
 
+### GET /api/exercises/meta
+
+Valores disponibles de cada filtro con su cantidad de ejercicios (ideal para dropdowns).
+
+```bash
+curl -H "x-api-key: tu-api-key" \
+  "http://localhost:3000/api/exercises/meta"
+```
+
+```json
+{
+  "data": {
+    "category": [{ "value": "cintura", "count": 37 }],
+    "body_part": [],
+    "equipment": [],
+    "muscle_group": [],
+    "target": []
+  }
+}
+```
+
+### GET /api/exercises/random
+
+Ejercicios aleatorios.
+
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| `limit` | number | Cantidad (default: 5, clamp 1–20) |
+| `lang` | string | Idioma de instrucciones |
+
+```bash
+curl -H "x-api-key: tu-api-key" \
+  "http://localhost:3000/api/exercises/random?limit=3&lang=es"
+```
+
+**Respuesta:** `{ "data": [...], "count": 3 }`
+
 ### GET /api/health
 
 Health check (no requiere API key).
@@ -139,6 +181,7 @@ curl http://localhost:3000/api/health
 
 | Código | Descripción |
 |--------|-------------|
+| 400 | Parámetro inválido (ej: más de 100 ids, idioma no soportado) |
 | 401 | API key inválida o faltante |
 | 404 | Ejercicio no encontrado |
 | 500 | Error interno del servidor |
