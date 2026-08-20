@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { applyLang, SUPPORTED_LANGS } from '@/lib/exercise-response'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +17,18 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0', 10)
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100)
 
+    // Get language parameter
+    const rawLang = searchParams.get('lang')
+    const lang = rawLang?.trim().toLowerCase() || null
+    if (lang && !(SUPPORTED_LANGS as readonly string[]).includes(lang)) {
+      return NextResponse.json(
+        {
+          error: `Unsupported language: ${rawLang}. Valid: ${SUPPORTED_LANGS.join(', ')}`,
+        },
+        { status: 400 }
+      )
+    }
+
     // Build where clause
     const where: Record<string, unknown> = {}
 
@@ -24,6 +37,26 @@ export async function GET(request: NextRequest) {
     if (equipment) where.equipment = equipment
     if (muscleGroup) where.muscleGroup = muscleGroup
     if (target) where.target = target
+
+    // Text search on name (case-insensitive)
+    const q = searchParams.get('q')?.trim()
+    if (q) where.name = { contains: q, mode: 'insensitive' }
+
+    // Batch fetch by ids
+    const idsRaw = searchParams.get('ids')
+    if (idsRaw !== null) {
+      const ids = idsRaw
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+      if (ids.length > 100) {
+        return NextResponse.json(
+          { error: 'Too many ids (max 100)' },
+          { status: 400 }
+        )
+      }
+      if (ids.length > 0) where.id = { in: ids }
+    }
 
     // Execute query
     const [exercises, total] = await Promise.all([
@@ -36,8 +69,19 @@ export async function GET(request: NextRequest) {
       prisma.exercise.count({ where }),
     ])
 
+    const data = lang
+      ? exercises.map((exercise) => {
+          const trimmed = applyLang(exercise, lang)
+          return {
+            ...exercise,
+            instructions: trimmed?.instructions ?? null,
+            instructionSteps: trimmed?.instructionSteps ?? null,
+          }
+        })
+      : exercises
+
     return NextResponse.json({
-      data: exercises,
+      data,
       total,
       offset,
       limit,
