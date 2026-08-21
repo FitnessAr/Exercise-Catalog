@@ -1,12 +1,20 @@
 {
   "schema_version": 2,
-  "active_work_id": "translate-exercises",
+  "active_work_id": "extend-catalog-api",
   "works": {
     "translate-exercises": {
       "work_id": "translate-exercises",
       "active_plan": ".omo/plans/translate-exercises.md",
       "plan_name": "translate-exercises",
       "session_ids": ["codex:ses_fe4e43597ffekppLTdgl45D3Is"],
+      "status": "active",
+      "worktree_path": null
+    },
+    "extend-catalog-api": {
+      "work_id": "extend-catalog-api",
+      "active_plan": ".omo/plans/extend-catalog-api.md",
+      "plan_name": "extend-catalog-api",
+      "session_ids": ["codex:ses_fdf3d0b19ffeXpvdiqI5eL6iSE"],
       "status": "active",
       "worktree_path": null
     }

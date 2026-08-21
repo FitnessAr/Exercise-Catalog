@@ -1,53 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { applyLang, SUPPORTED_LANGS } from '@/lib/exercise-response'
+import type { NextRequest } from 'next/server'
+import { ApiError, json, withApi } from '@/lib/api/http'
+import { parseLang } from '@/lib/api/params'
+import { findExerciseById } from '@/lib/exercises/queries'
+import { localizeExercise } from '@/lib/exercise-response'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
+  return withApi('GET /api/exercises/[id]', async () => {
     const { id } = await params
+    const lang = parseLang(request.nextUrl.searchParams)
 
-    const exercise = await prisma.exercise.findUnique({
-      where: { id },
-    })
+    const exercise = await findExerciseById(id)
+    if (!exercise) throw new ApiError(404, 'Exercise not found')
 
-    if (!exercise) {
-      return NextResponse.json(
-        { error: 'Exercise not found' },
-        { status: 404 }
-      )
-    }
-
-    const rawLang = new URL(request.url).searchParams.get('lang')
-    const lang = rawLang?.trim().toLowerCase() || null
-    if (lang && !(SUPPORTED_LANGS as readonly string[]).includes(lang)) {
-      return NextResponse.json(
-        {
-          error: `Unsupported language: ${rawLang}. Valid: ${SUPPORTED_LANGS.join(', ')}`,
-        },
-        { status: 400 }
-      )
-    }
-
-    if (lang) {
-      const trimmed = applyLang(exercise, lang)
-      return NextResponse.json({
-        data: {
-          ...exercise,
-          instructions: trimmed?.instructions ?? null,
-          instructionSteps: trimmed?.instructionSteps ?? null,
-        },
-      })
-    }
-
-    return NextResponse.json({ data: exercise })
-  } catch (error) {
-    console.error('Error fetching exercise:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
+    return json({ data: localizeExercise(exercise, lang) })
+  })
 }

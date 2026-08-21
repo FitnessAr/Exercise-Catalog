@@ -1,96 +1,49 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { applyLang, SUPPORTED_LANGS } from '@/lib/exercise-response'
+import type { NextRequest } from 'next/server'
+import { ApiError, json, withApi } from '@/lib/api/http'
+import { clamp, parseLang, parseIntParam } from '@/lib/api/params'
+import { findExercises, type ExerciseFilters } from '@/lib/exercises/queries'
+import { localizeExercise } from '@/lib/exercise-response'
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
+  return withApi('GET /api/exercises', async () => {
+    const { searchParams } = request.nextUrl
 
-    // Get filter parameters
+    const filters: ExerciseFilters = {}
     const category = searchParams.get('category')
+    if (category) filters.category = category
     const bodyPart = searchParams.get('body_part')
+    if (bodyPart) filters.bodyPart = bodyPart
     const equipment = searchParams.get('equipment')
+    if (equipment) filters.equipment = equipment
     const muscleGroup = searchParams.get('muscle_group')
+    if (muscleGroup) filters.muscleGroup = muscleGroup
     const target = searchParams.get('target')
-
-    // Get pagination parameters
-    const offset = parseInt(searchParams.get('offset') || '0', 10)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100)
-
-    // Get language parameter
-    const rawLang = searchParams.get('lang')
-    const lang = rawLang?.trim().toLowerCase() || null
-    if (lang && !(SUPPORTED_LANGS as readonly string[]).includes(lang)) {
-      return NextResponse.json(
-        {
-          error: `Unsupported language: ${rawLang}. Valid: ${SUPPORTED_LANGS.join(', ')}`,
-        },
-        { status: 400 }
-      )
-    }
-
-    // Build where clause
-    const where: Record<string, unknown> = {}
-
-    if (category) where.category = category
-    if (bodyPart) where.bodyPart = bodyPart
-    if (equipment) where.equipment = equipment
-    if (muscleGroup) where.muscleGroup = muscleGroup
-    if (target) where.target = target
-
-    // Text search on name (case-insensitive)
+    if (target) filters.target = target
     const q = searchParams.get('q')?.trim()
-    if (q) where.name = { contains: q, mode: 'insensitive' }
+    if (q) filters.nameContains = q
 
-    // Batch fetch by ids
     const idsRaw = searchParams.get('ids')
     if (idsRaw !== null) {
       const ids = idsRaw
         .split(',')
         .map((id) => id.trim())
         .filter(Boolean)
-      if (ids.length > 100) {
-        return NextResponse.json(
-          { error: 'Too many ids (max 100)' },
-          { status: 400 }
-        )
-      }
-      if (ids.length > 0) where.id = { in: ids }
+      if (ids.length > 100) throw new ApiError(400, 'Too many ids (max 100)')
+      if (ids.length > 0) filters.ids = ids
     }
 
-    // Execute query
-    const [exercises, total] = await Promise.all([
-      prisma.exercise.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { id: 'asc' },
-      }),
-      prisma.exercise.count({ where }),
-    ])
+    const offset = parseIntParam(searchParams, 'offset', 0)
+    if (offset < 0) throw new ApiError(400, 'offset must be >= 0')
+    const limit = clamp(parseIntParam(searchParams, 'limit', 20), 0, 100)
+    const lang = parseLang(searchParams)
 
-    const data = lang
-      ? exercises.map((exercise) => {
-          const trimmed = applyLang(exercise, lang)
-          return {
-            ...exercise,
-            instructions: trimmed?.instructions ?? null,
-            instructionSteps: trimmed?.instructionSteps ?? null,
-          }
-        })
-      : exercises
+    const { items, total } = await findExercises({ filters, offset, limit })
 
-    return NextResponse.json({
-      data,
+    return json({
+      data: items.map((exercise) => localizeExercise(exercise, lang)),
       total,
       offset,
       limit,
     })
-  } catch (error) {
-    console.error('Error fetching exercises:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
+  })
 }

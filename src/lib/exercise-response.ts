@@ -44,3 +44,19 @@ export function applyLang(
     instructionSteps: stepsKey ? (steps?.[stepsKey] ?? null) : null,
   }
 }
+
+// Devuelve el ejercicio recortado al idioma pedido, o intacto si no hay lang.
+export function localizeExercise<
+  T extends { instructions: unknown; instructionSteps: unknown }
+>(
+  exercise: T,
+  lang?: SupportedLang | null
+): T {
+  if (!lang) return exercise
+  const trimmed = applyLang(exercise, lang)
+  return {
+    ...exercise,
+    instructions: trimmed?.instructions ?? null,
+    instructionSteps: trimmed?.instructionSteps ?? null,
+  }
+}
