@@ -2,9 +2,10 @@
 
 Referencia completa de todos los endpoints usables de la API.
 
-- **Base URL (local)**: `http://localhost:3000`
+- **Base URL (local)**: `https://exercise-catalog-coral.vercel.app/`
 - **Formato**: JSON
 - **Fuente de datos**: ~1324 ejercicios (datos en español)
+- **Api key**: 1234
 
 ## Autenticación
 
